@@ -1,0 +1,74 @@
+<!-- ============================================================ -->
+<!-- 1) Cole isto dentro do <head>, logo abaixo do <meta viewport> -->
+<!-- ============================================================ -->
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b91c1c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ponto PJ">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+<!-- ============================================================ -->
+<!-- 2) Cole isto antes do </body>, no final da página             -->
+<!-- ============================================================ -->
+
+<script>
+  // Registro do Service Worker (ativa modo offline + "Adicionar à tela inicial")
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js")
+        .then((reg) => {
+          console.log("[PWA] Service Worker registrado:", reg.scope);
+
+          // Detecta quando existe uma nova versão pronta e avisa o usuário
+          reg.addEventListener("updatefound", () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                // Nova versão baixada e pronta — recarrega para aplicar
+                console.log("[PWA] Nova versão disponível, atualizando...");
+                newWorker.postMessage("SKIP_WAITING");
+              }
+            });
+          });
+        })
+        .catch((err) => console.error("[PWA] Falha ao registrar Service Worker:", err));
+
+      // Recarrega automaticamente quando o novo SW assume o controle
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    });
+  }
+
+  // Botão opcional "Instalar app" (Android/Desktop Chrome/Edge)
+  let deferredPrompt;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById("btnInstalarApp");
+    if (btn) btn.style.display = "inline-flex";
+  });
+
+  function instalarApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    const btn = document.getElementById("btnInstalarApp");
+    if (btn) btn.style.display = "none";
+  }
+</script>
+
+<!-- ============================================================ -->
+<!-- 3) (Opcional) Botão de instalar — cole onde quiser no layout  -->
+<!-- ============================================================ -->
+
+<button id="btnInstalarApp" onclick="instalarApp()" style="display:none;">
+  📲 Instalar App
+</button>
